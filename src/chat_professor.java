@@ -32,7 +32,9 @@ public class chat_professor extends Frame{
         GBL.setConstraints(P1,P1C);
         add(P1);
     }
-    public void StartSocket(){sock.start();}
+    public void StartSocket(){
+        sock.start();
+    }
     public boolean handleEvent(Event i){
         if(i.id==Event.WINDOW_DESTROY){
             dispose();

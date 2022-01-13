@@ -59,6 +59,8 @@ public class UserRegister extends Frame {
                 ecran.setText("Este utilizador já existe associado ao pin: " + this.nameService.getPin(name));
             } else if(this.nameService.isPinRegistered(pin)){
                 ecran.setText("Este pin já está associado ao utilizador: " + this.nameService.getUser(pin));
+            } else if (!isNumber(pin) || Integer.parseInt(pin) < 8000 || Integer.parseInt(pin) > 8010){
+                ecran.setText("Pin invalido. Está fora do range 8000 e 8010.");
             } else {
                 this.nameService.registerUser(name, pin);
                 this.nameService.readFile();
@@ -68,4 +70,14 @@ public class UserRegister extends Frame {
         }
         return false;
     }
+
+    public boolean isNumber(String str){
+        try {
+            int val = Integer.parseInt(str);
+            return true;
+        } catch (NumberFormatException e){
+            return false;
+        }
+    }
+
 }

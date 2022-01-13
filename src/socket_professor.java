@@ -6,10 +6,16 @@ public class socket_professor extends Thread{
     DatagramSocket DS;
     byte bp[]=new byte[1024];
     TextArea ecran=new TextArea(10,30);
-    socket_professor(TextArea ta){ecran=ta;}
+    socket_professor(TextArea ta){
+        ecran=ta;
+    }
     public void run(){
-        try{DS=new DatagramSocket(8080);}
-        catch(IOException e){}
+        try{
+            DS=new DatagramSocket(8080);
+        }
+        catch(IOException e){
+
+        }
         while(true) receiveDP();
     }
     public void receiveDP(){
