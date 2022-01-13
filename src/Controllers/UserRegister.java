@@ -1,29 +1,21 @@
+package Controllers;
+
 import java.awt.*;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
-import java.io.IOException;
 
 public class UserRegister extends Frame {
     NameService nameService = null;
     TextArea ecran=new TextArea(1,75);
     TextField nameField=new TextField("Nome",30);
     TextField pinField=new TextField("Pin",30);
-    Button Register=new Button("Register");
+    Button register =new Button("Register");
+    Button newChatWindow = new Button("New Chat Window");
 
     public UserRegister(String str, NameService nameService){
         super(str);
         this.nameService = nameService;
-        resize(600,120);
+        resize(600,150);
         GUI();
         show();
-    }
-
-    public static void main(String[] args)throws IOException {
-        //UserRegister userRegister=new UserRegister("Register", null);
-        //userRegister.resize(600,200);
-        //userRegister.GUI();
-        //userRegister.show();
-
     }
 
     public void GUI(){
@@ -34,10 +26,11 @@ public class UserRegister extends Frame {
         Panel P1=new Panel();
         P1.add("North",nameField);
         P1.add("West",pinField);
-        P1.add("East",Register);
+        P1.add("East", register);
         P1.add("South",ecran);
-
+        P1.add("South", newChatWindow);
         add(P1);
+        setLocation((Toolkit.getDefaultToolkit().getScreenSize().width  - getSize().width) / 2, (Toolkit.getDefaultToolkit().getScreenSize().height - getSize().height) / 10);
     }
 
     public boolean handleEvent(Event i){
@@ -50,7 +43,7 @@ public class UserRegister extends Frame {
     }
 
     public boolean action(Event i,Object o){
-        if(i.target==Register){
+        if(i.target== register){
             String name=nameField.getText();
             String pin=pinField.getText();
             //sock.sendDP(8080,msg,end);
@@ -67,6 +60,8 @@ public class UserRegister extends Frame {
                 ecran.setText("Registado com sucesso!");
             }
             return true;
+        } else if ( i.target == newChatWindow ){
+            new Chat("Chat", nameService);
         }
         return false;
     }

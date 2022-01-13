@@ -1,18 +1,20 @@
+package Controllers;
+
 import javax.crypto.*;
-import javax.crypto.spec.*;
 import java.awt.*;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
+import java.util.Arrays;
 
 public class Socket implements Runnable {
     Integer pin = null;
     NameService nameService = null;
     SecretKey secretKey = null;
     Cipher desCipher = null;
+    boolean running = false;
 
     InetAddress ER,IPr;
     DatagramSocket DS;
@@ -25,6 +27,7 @@ public class Socket implements Runnable {
         this.nameService = nameService;
         this.secretKey = secretKey;
         this.desCipher = desCipher;
+        this.running = true;
     }
 
     @Override
@@ -35,56 +38,61 @@ public class Socket implements Runnable {
         catch(IOException e){
 
         }
-        while(true) receiveDP();
+        while(running) receiveDP();
+    }
+
+    public void stop(){
+        this.running = false;
+    }
+
+    public boolean isRunning(){
+        return this.running;
     }
 
     public void receiveDP(){
         try{
+            //Recebe um packet vindo da network
             DatagramPacket DP = new DatagramPacket(bp,1024);
             DS.receive(DP);
 
-            System.out.println(this.secretKey.toString());
-
             String receivingMsg = null;
             try {
-                byte payload[] = DP.getData();
-                String encodedMSG = new String(payload,0,0,DP.getLength());
-                payload = encodedMSG.getBytes();
-                this.desCipher.init(Cipher.DECRYPT_MODE, this.secretKey);
-                byte[] receivingString = desCipher.doFinal(payload);
-                receivingMsg = new String(receivingString,0,0,DP.getLength());
+                //Apanha apenas cadeia de bytes da string vindo do packet
+                byte[] b = Arrays.copyOf(DP.getData(), DP.getLength());
+                //Faz decode da mensagem
+                desCipher.init(Cipher.DECRYPT_MODE, secretKey);
+                byte[] decodedSTR = desCipher.doFinal(b);
+                receivingMsg = new String(decodedSTR);
+
             } catch (Exception e){
+                System.out.println("Erro a fazer a decifragem do packet receptor.");
                 System.out.println(e);
             }
 
-            //byte Payload[] = DP.getData();
-            //int len = DP.getLength();
-            //String receivingMsg = new String(Payload,0,0,len);
             String receivingUser = this.nameService.getUser(String.valueOf(DP.getPort()));
             ecran.appendText(receivingUser+": "+ receivingMsg + "\n");
         }catch(IOException e){
-
+            System.out.println("Erro a receber o packet.");
+            System.out.println(e);
         }
     }
 
     public void sendDP(Integer port, String msg){
         try{
-            byte[] b = msg.getBytes();
+            //Faz encode da mensagem
+            byte[] b = msg.getBytes(StandardCharsets.UTF_8);
             this.desCipher.init(Cipher.ENCRYPT_MODE, this.secretKey);
-
-            System.out.println(this.secretKey.toString());
-
-            byte[] encodedSTR = desCipher.doFinal(b);
+            byte[] encodedSTR = this.desCipher.doFinal(b);
             int len = msg.length();
-            //String eSTR=new String(encodedSTR);
 
-            //int len=msg.length();
-            //byte b[]=new byte[len];
-            //msg.getBytes(0,len,b,0);
-            DatagramPacket DP=new DatagramPacket(encodedSTR, len, InetAddress.getByName("127.0.0.1"), port);
+            ecran.appendText("Mensagem encriptada enviada: " + new String(encodedSTR, 0, 0, len) + "\n");
+
+            //Envia um packet para a network
+            DatagramPacket DP=new DatagramPacket(encodedSTR, encodedSTR.length, InetAddress.getByName("127.0.0.1"), port);
             DS.send(DP);
         }catch(Exception e){
-
+            System.out.println("Erro ao enviar o packet.");
+            System.out.println(e);
         }
     }
 

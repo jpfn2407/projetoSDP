@@ -1,19 +1,20 @@
+package Controllers;
 
 import java.awt.*;
 import java.io.*;
-import java.util.Scanner;
 
 public class NameService extends Frame implements Runnable {
     TextArea ecran=new TextArea(25,30);
+    private static final String csvFilePath = "./src/names.csv";
 
     public static void main(String[] args) {
         //Trata da criação do ficheiro CSV
-        File file = new File("./src/names.csv");
+        File file = new File(csvFilePath);
         if(file.exists() && !file.isDirectory()){
             System.out.println("Ficheiro de nomes já existe.");
         } else {
             System.out.println("Criando um novo ficheiro de nomes.");
-            try (FileWriter writer = new FileWriter("./src/names.csv")) {
+            try (FileWriter writer = new FileWriter(csvFilePath)) {
 
                 StringBuilder sb = new StringBuilder();
                 sb.append("name");
@@ -28,7 +29,6 @@ public class NameService extends Frame implements Runnable {
                 e.printStackTrace();
             }
         }
-
     }
 
     public NameService(String str){
@@ -49,6 +49,8 @@ public class NameService extends Frame implements Runnable {
         Panel P1 = new Panel();
         P1.add("North",ecran);
         add(P1);
+        setLocation((Toolkit.getDefaultToolkit().getScreenSize().width  - getSize().width) / 5, (Toolkit.getDefaultToolkit().getScreenSize().height - getSize().height) / 5);
+
     }
 
     public void readFile() {
@@ -56,11 +58,11 @@ public class NameService extends Frame implements Runnable {
         String currentLine;
         BufferedReader br = null;
         try {
-            br = new BufferedReader(new FileReader("./src/names.csv"));
+            br = new BufferedReader(new FileReader(csvFilePath));
             while ((currentLine = br.readLine()) != null) {
                 String[] str = currentLine.split(",");
                 //System.out.println(str[0] + "," + str[1]);
-                String word = (str[0] + " / " + str[1] + '\n');
+                String word = (str[0] + " // " + str[1] + '\n');
                 ecran.append(word);
             }
         } catch (IOException e) {
@@ -83,7 +85,7 @@ public class NameService extends Frame implements Runnable {
     }
 
     public void registerUser(String name, String pin){
-        try (FileWriter writer = new FileWriter("./src/names.csv", true)) {
+        try (FileWriter writer = new FileWriter(csvFilePath, true)) {
 
             StringBuilder sb = new StringBuilder();
             sb.append(name);
@@ -103,7 +105,7 @@ public class NameService extends Frame implements Runnable {
         String currentLine;
         BufferedReader br = null;
         try {
-            br = new BufferedReader(new FileReader("./src/names.csv"));
+            br = new BufferedReader(new FileReader(csvFilePath));
             while ((currentLine = br.readLine()) != null) {
                 String[] str = currentLine.split(",");
                 if(str[0].equals(name)){
@@ -120,7 +122,7 @@ public class NameService extends Frame implements Runnable {
         String currentLine;
         BufferedReader br = null;
         try {
-            br = new BufferedReader(new FileReader("./src/names.csv"));
+            br = new BufferedReader(new FileReader(csvFilePath));
             while ((currentLine = br.readLine()) != null) {
                 String[] str = currentLine.split(",");
                 if(str[1].equals(pin)){
@@ -137,7 +139,7 @@ public class NameService extends Frame implements Runnable {
         String currentLine;
         BufferedReader br = null;
         try {
-            br = new BufferedReader(new FileReader("./src/names.csv"));
+            br = new BufferedReader(new FileReader(csvFilePath));
             while ((currentLine = br.readLine()) != null) {
                 String[] str = currentLine.split(",");
                 if(str[0].equals(name)){
@@ -154,7 +156,7 @@ public class NameService extends Frame implements Runnable {
         String currentLine;
         BufferedReader br = null;
         try {
-            br = new BufferedReader(new FileReader("./src/names.csv"));
+            br = new BufferedReader(new FileReader(csvFilePath));
             while ((currentLine = br.readLine()) != null) {
                 String[] str = currentLine.split(",");
                 if(str[1].equals(pin)){

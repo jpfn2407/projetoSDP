@@ -1,15 +1,16 @@
+package Controllers;
+
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.DESKeySpec;
 import java.awt.*;
-import java.io.IOException;
 
 public class Chat extends Frame {
     Integer pin = null;
     NameService nameService = null;
     Socket sock= null;
-    private static final String desEncodingPassword = "Password Super Secreta de SDP";
+    private static final String desEncodingPassword = "PasswordSuperSecreta";
     SecretKey secretKey = null;
     Cipher desCipher = null;
 
@@ -29,36 +30,29 @@ public class Chat extends Frame {
         show();
     }
 
-    public static void main(String[] args)throws IOException {
-
-    }
-
     public void GUI(){
         setResizable(false);
         setBackground(Color.lightGray);
         ecran.setEditable(false);
-        //GridBagLayout GBL=new GridBagLayout();
-        //setLayout(GBL);
-
         Panel P1=new Panel();
         setLayout(new BorderLayout(10,10));
-        //setLayout(new GridLayout(3,2));
         P1.add(pinField);
         P1.add(validateBtn);
         P1.add(usersField);
         P1.add(msgField);
         P1.add(sendBtn);
         P1.add(ecran);
-        //GridBagConstraints P1C=new GridBagConstraints();
-        //P1C.gridwidth=GridBagConstraints.REMAINDER;
-        //GBL.setConstraints(P1,P1C);
         add(P1);
+        setLocation((Toolkit.getDefaultToolkit().getScreenSize().width  - getSize().width) / 2, (Toolkit.getDefaultToolkit().getScreenSize().height - getSize().height) / 2);
     }
 
     public boolean handleEvent(Event i){
         if(i.id==Event.WINDOW_DESTROY){
             dispose();
-            System.exit(0);
+            //System.exit(0);
+            if( this.sock != null && this.sock.isRunning()){
+                this.sock.stop();
+            }
             return true;
         }
         return super.handleEvent(i);
@@ -77,12 +71,14 @@ public class Chat extends Frame {
                 try {
                     ecran.appendText("\n Utilizador " + this.nameService.getUser(pin) + " validado! \n \n");
                     this.pin = Integer.parseInt(pin);
+
+                    //Cria o conteudo necessario para fazer encode e decode de mensagens
                     DESKeySpec desKeySpec = new DESKeySpec(this.desEncodingPassword.getBytes());
                     SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("DES");
                     this.secretKey = keyFactory.generateSecret(desKeySpec);
                     this.desCipher = Cipher.getInstance("DES/ECB/PKCS5Padding");
-                    //this.desCipher = Cipher.getInstance("DES/ECB/NoPadding");
 
+                    //Cria um novo socket e associa a uma thread
                     this.sock = new Socket(ecran, this.pin, this.nameService, this.secretKey, this.desCipher);
                     Thread thread = new Thread(this.sock);
                     thread.start();
