@@ -1,12 +1,12 @@
 import java.io.*;
 import java.net.*;
 import java.awt.*;
-public class socket extends Thread{
+public class socket_professor extends Thread{
     InetAddress ER,IPr;
     DatagramSocket DS;
     byte bp[]=new byte[1024];
     TextArea ecran=new TextArea(10,30);
-    socket(TextArea ta){ecran=ta;}
+    socket_professor(TextArea ta){ecran=ta;}
     public void run(){
         try{DS=new DatagramSocket(8080);}
         catch(IOException e){}

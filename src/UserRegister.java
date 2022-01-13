@@ -5,7 +5,7 @@ import java.io.IOException;
 
 public class UserRegister extends Frame {
     NameService nameService = null;
-    TextArea ecran=new TextArea(3,75);
+    TextArea ecran=new TextArea(1,75);
     TextField nameField=new TextField("Nome",30);
     TextField pinField=new TextField("Pin",30);
     Button Register=new Button("Register");
@@ -13,7 +13,7 @@ public class UserRegister extends Frame {
     public UserRegister(String str, NameService nameService){
         super(str);
         this.nameService = nameService;
-        resize(600,200);
+        resize(600,120);
         GUI();
         show();
     }
@@ -55,6 +55,15 @@ public class UserRegister extends Frame {
             String pin=pinField.getText();
             //sock.sendDP(8080,msg,end);
             //text.setText("");
+            if(this.nameService.isUserRegistered(name)){
+                ecran.setText("Este utilizador já existe associado ao pin: " + this.nameService.getPin(name));
+            } else if(this.nameService.isPinRegistered(pin)){
+                ecran.setText("Este pin já está associado ao utilizador: " + this.nameService.getUser(pin));
+            } else {
+                this.nameService.registerUser(name, pin);
+                this.nameService.readFile();
+                ecran.setText("Registado com sucesso!");
+            }
             return true;
         }
         return false;

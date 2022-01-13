@@ -1,16 +1,16 @@
 import java.io.*;
 import java.awt.*;
-public class chat extends Frame{
+public class chat_professor extends Frame{
     TextArea ecran=new TextArea(10,30);
     TextField addr=new TextField(30);
     TextField text=new TextField(30);
     Button Send=new Button("Send");
-    socket sock=new socket(ecran);
-    public chat(String str){
+    socket_professor sock=new socket_professor(ecran);
+    public chat_professor(String str){
         super(str);
     }
     public static void main(String[] args)throws IOException{
-        chat app=new chat("Chat");
+        chat_professor app=new chat_professor("Chat");
         app.resize(320,290);
         app.GUI();
         app.show();
