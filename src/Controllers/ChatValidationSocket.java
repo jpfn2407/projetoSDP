@@ -47,7 +47,7 @@ public class ChatValidationSocket implements Runnable {
         return this.running;
     }
 
-    public Integer validateMethod(String pin){
+    public ArrayList<Object> validateMethod(String pin){
         try {
             if (!isNumber(pin) || Integer.parseInt(pin) < 8000 || Integer.parseInt(pin) > 8010){
                 ecran.appendText("Pin invalido. Está fora do range 8000 e 8010. \n");
@@ -70,13 +70,12 @@ public class ChatValidationSocket implements Runnable {
                 try {
                     this.pin = Integer.parseInt(pin);
                     this.DS = new DatagramSocket(this.pin);
-                    ecran.appendText("\n Utilizador " +
-                            (String) sendCommandPackage(new ArrayList<>(Arrays.asList("getUser", pin))).get(1) +
-                            " validado! \n \n");
+                    String name = (String) sendCommandPackage(new ArrayList<>(Arrays.asList("getUser", pin))).get(1);
+                    ecran.appendText("\n Utilizador " + name + " validado! \n \n");
                     this.running = true;
                     this.DS.close();
                     this.DS = null;
-                    return this.pin;
+                    return new ArrayList<>(Arrays.asList(this.pin, name));
                     //setTitle(this.nameService.getUser(pin));
 
                 } catch (Exception e){

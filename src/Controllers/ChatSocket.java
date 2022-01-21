@@ -13,6 +13,7 @@ import java.util.Arrays;
 
 public class ChatSocket implements Runnable {
     private Integer pin;
+    private String name;
     //private NameService nameService = null;
     private Chat chat;
     private SecretKey secretKey;
@@ -23,9 +24,10 @@ public class ChatSocket implements Runnable {
     private byte bp[]=new byte[1024];
     private TextArea ecran=new TextArea(10,30);
 
-    ChatSocket(TextArea ta, Integer pin, SecretKey secretKey, Cipher desCipher, Chat chat){
+    ChatSocket(TextArea ta, Integer pin, String name, SecretKey secretKey, Cipher desCipher, Chat chat){
         ecran=ta;
         this.pin = pin;
+        this.name = name;
         this.chat = chat;
         //this.nameService = nameService;
         this.secretKey = secretKey;
@@ -42,7 +44,6 @@ public class ChatSocket implements Runnable {
     @Override
     public void run() {
         while(running) {
-            System.out.println("im running");
             receiveDP();
         }
     }
@@ -62,33 +63,38 @@ public class ChatSocket implements Runnable {
             //Recebe um packet vindo da network
             DatagramPacket DP = new DatagramPacket(bp,1024);
             this.DS.receive(DP);
+            try {
+                byte[] listDataBytes = Arrays.copyOf(DP.getData(), DP.getLength());
+                ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(listDataBytes));
+                ArrayList<Object> receivedList = (ArrayList) inputStream.readObject();
+                String validation = (String) receivedList.get(0);
 
-            if(DP.getPort() == 7999) {
-                ArrayList<Object> receivedCommands = null;
-                while (receivedCommands == null){
-                    try{
-                        byte[] listData = new byte[1024];
-                        DatagramPacket datagramPacket = new DatagramPacket(listData,1024);
-                        this.DS.receive(datagramPacket);
-                        byte[] listDataBytes = Arrays.copyOf(datagramPacket.getData(), datagramPacket.getLength());
-                        ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(listDataBytes));
-                        receivedCommands = (ArrayList) inputStream.readObject();
 
-                        if(receivedCommands.get(0).equals("isUserRegistered")){
-                            if(!(boolean)receivedCommands.get(1)){
-                                ecran.appendText("AVISO: Um dos utilizadores não se encontra registado. \n");
-                            }
-                        } else {
-                            sendCommandPackage(new ArrayList<>(Arrays.asList("getPin", user)));
+                if(validation.equals("validateUsersInMessage")){
+                    String msg = (String) receivedList.get(1);
+                    ArrayList<String> usersList = (ArrayList) receivedList.get(2);
+                    for(String portStr : usersList){
+                        Integer port = Integer.parseInt(portStr);
+                        if(port != null){
+                            //byte[] b = msg.getBytes(StandardCharsets.UTF_8);
+                            this.desCipher.init(Cipher.ENCRYPT_MODE, this.secretKey);
+                            ArrayList<Object> sendList = new ArrayList<>();
+                            sendList.add(msg);
+                            sendList.add(this.name);
+                            byte[] b = sendList.stream().collect(ByteArrayOutputStream::new, (baos, i) -> baos.write((byte) i),
+                                            (baos1, baos2) -> baos1.write(baos2.toByteArray(), 0, baos2.size()))
+                                    .toByteArray();
+                            byte[] encodedSTR = this.desCipher.doFinal(b);
+                            int len = msg.length();
+
+                            ecran.appendText("Mensagem encriptada enviada: " + new String(encodedSTR, 0, 0, len) + "\n");
+                            //Envia um packet para a network
+                            DatagramPacket sendDP = new DatagramPacket(encodedSTR, encodedSTR.length, InetAddress.getByName("127.0.0.1"), port);
+                            DS.send(sendDP);
                         }
-
-                    } catch (Exception e){
-                        System.out.println(e);
                     }
                 }
-
-            }
-            else {
+            } catch (Exception e){
                 String receivingMsg = null;
                 try {
                     //Apanha apenas cadeia de bytes da string vindo do packet
@@ -96,18 +102,36 @@ public class ChatSocket implements Runnable {
                     //Faz decode da mensagem
                     desCipher.init(Cipher.DECRYPT_MODE, secretKey);
                     byte[] decodedSTR = desCipher.doFinal(b);
-                    receivingMsg = new String(decodedSTR);
+                    ArrayList<Object> sendList = Arrays.asList(ArrayUtils.toObject(array));
+                    //receivingMsg = new String(decodedSTR);
 
-                } catch (Exception e){
+                    //String receivingUser = (String.valueOf(DP.getPort()));
+                    ecran.appendText( receivingUser + ":" + receivingMsg + "\n");
+                } catch (Exception e2){
                     System.out.println("Erro a fazer a decifragem do packet receptor.");
-                    System.out.println(e);
+                    System.out.println(e2);
                 }
-
-                //String receivingUser = this.nameService.getUser(String.valueOf(DP.getPort()));
-                sendCommandPackage(new ArrayList<>(Arrays.asList("getUser", this.pin)));
-                String receivingUser = (String) this.latestDP.get(0);
-                ecran.appendText(receivingUser+": "+ receivingMsg + "\n");
+                System.out.println("Packet recebido.");
+                //System.out.println(e);
             }
+
+            //String receivingMsg = null;
+            //try {
+            //    //Apanha apenas cadeia de bytes da string vindo do packet
+            //    byte[] b = Arrays.copyOf(DP.getData(), DP.getLength());
+            //    //Faz decode da mensagem
+            //    desCipher.init(Cipher.DECRYPT_MODE, secretKey);
+            //    byte[] decodedSTR = desCipher.doFinal(b);
+            //    receivingMsg = new String(decodedSTR);
+            //} catch (Exception e){
+            //    System.out.println("Erro a fazer a decifragem do packet receptor.");
+            //    System.out.println(e);
+            //}
+
+
+            //String receivingUser = this.nameService.getUser(String.valueOf(DP.getPort()));
+            //ecran.appendText( receivingUser + ":" + receivingMsg + "\n");
+
 
         }catch(IOException e){
             System.out.println("Erro a receber o packet.");
@@ -133,9 +157,15 @@ public class ChatSocket implements Runnable {
         }
     }
 
-    public void sendCommandPackage(ArrayList<Object> commandListPackage){
+
+    public void sendMessage(String msg, String[] usersList) {
         try {
             //Transforma a lista em package de bytes para enviar
+            ArrayList<Object> commandListPackage = new ArrayList<>();
+            commandListPackage.add("validateUsersInMessage");
+            commandListPackage.add(msg);
+            commandListPackage.add(usersList);
+
             ByteArrayOutputStream out = new ByteArrayOutputStream();
 
             ObjectOutputStream outputStream = null;
@@ -147,23 +177,6 @@ public class ChatSocket implements Runnable {
             this.DS.send(DP);
         } catch (IOException e) {
             e.printStackTrace();
-        }
-
-    }
-
-
-    public void sendMessage(String msg, String[] usersList) {
-        if (this.pin == null) {
-            ecran.appendText("Ainda não validou um pin. \n");
-        } else {
-            for(String user : usersList){
-                sendCommandPackage(new ArrayList<>(Arrays.asList("isUserRegistered", user)));
-
-                sendCommandPackage(new ArrayList<>(Arrays.asList("getPin", user)));
-                Integer port = Integer.parseInt((String) this.latestDP.get(0));
-                sendDP(port, msg);
-                }
-            }
         }
     }
 }

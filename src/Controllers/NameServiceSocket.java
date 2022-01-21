@@ -67,6 +67,14 @@ public class NameServiceSocket implements Runnable{
                     pin = (String) receivedList.get(1);
                     sendResponse(new ArrayList<>(Arrays.asList("getUser", this.nameService.getUser(pin), port)));
                     break;
+                case "validateUsersInMessage":
+                    String msg = (String) receivedList.get(1);
+                    ArrayList<Object> responseList = new ArrayList<>();
+                    for(String user : (String[]) receivedList.get(2)){
+                        responseList.add(this.nameService.getPin(user));
+                    }
+                    sendResponse(new ArrayList<>(Arrays.asList("validateUsersInMessage",msg, responseList, port)));
+                    break;
             }
 
 

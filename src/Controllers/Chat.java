@@ -6,6 +6,7 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.DESKeySpec;
 import java.awt.*;
 import java.security.InvalidKeyException;
+import java.util.ArrayList;
 
 public class Chat extends Frame {
     private Integer pin = null;
@@ -121,10 +122,11 @@ public class Chat extends Frame {
             //    }
             //}
 
-            Integer port = this.validationSocket.validateMethod(pin);
-            System.out.println(port);
-            if(port != null){
-                this.sock = new ChatSocket(ecran, port, this.secretKey, this.desCipher, this);
+            ArrayList<Object> validationList = this.validationSocket.validateMethod(pin);
+            if(validationList != null){
+                Integer port = (Integer) validationList.get(0);
+                String name = (String)  validationList.get(1);
+                this.sock = new ChatSocket(ecran, port, name, this.secretKey, this.desCipher, this);
                 this.sockThread = new Thread(this.sock);
                 this.sockThread.start();
             }
