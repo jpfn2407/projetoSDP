@@ -1,28 +1,38 @@
 package Controllers;
-
 import java.awt.*;
 
 public class UserRegister extends Frame {
-    NameService nameService = null;
-    TextArea ecran=new TextArea(1,75);
-    TextField nameField=new TextField("Nome",30);
-    TextField pinField=new TextField("Pin",30);
-    Button register =new Button("Register");
-    Button newChatWindow = new Button("New Chat Window");
+    private double screenWidth;
+    private double screenHeight;
+    private NameService nameService = null;
+
+    private TextArea ecran=new TextArea(1,75);
+    private TextField nameField=new TextField("Nome",30);
+    private TextField pinField=new TextField("Pin",30);
+    private Button register = new Button("Register");
+    private Button newChatWindow = new Button("New Chat Window");
 
     public UserRegister(String str, NameService nameService){
         super(str);
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        this.screenWidth = screenSize.getWidth();
+        this.screenHeight = screenSize.getHeight();
         this.nameService = nameService;
-        resize(600,150);
+
+        //GUI elements
+        resize((int)Math.round(this.screenWidth * 0.3125),(int)Math.round(this.screenHeight * 0.13));
+        this.ecran = new TextArea((int)Math.round(this.screenHeight * 0.0009),(int)Math.round(this.screenWidth * 0.04));
+        this.nameField = new TextField("Nome",(int)Math.round(this.screenWidth * 0.016));
+        this.pinField = new TextField("Pin",(int)Math.round(this.screenWidth * 0.016));
         GUI();
         show();
     }
+
 
     public void GUI(){
         setResizable(false);
         setBackground(Color.lightGray);
         //ecran.setEditable(false);
-
         Panel P1=new Panel();
         P1.add("North",nameField);
         P1.add("West",pinField);

@@ -3,9 +3,16 @@ package Controllers;
 import java.awt.*;
 import java.io.*;
 
-public class NameService extends Frame implements Runnable {
-    TextArea ecran=new TextArea(25,30);
+public class NameService extends Frame{
+    private double screenWidth;
+    private double screenHeight;
+    private TextArea userField = new TextArea(25,15);
+    private TextArea pinField = new TextArea(25,15);
+
+
     private static final String csvFilePath = "./src/names.csv";
+    private NameServiceSocket nameServiceSocket = null;
+    private Thread sockThread;
 
     public static void main(String[] args) {
         //Trata da criação do ficheiro CSV
@@ -33,7 +40,17 @@ public class NameService extends Frame implements Runnable {
 
     public NameService(String str){
         super(str);
-        resize(300,500);
+
+        NameServiceSocket nameServiceSocket = new NameServiceSocket(this);
+        this.sockThread = new Thread(nameServiceSocket);
+        this.sockThread.start();
+
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        this.screenWidth = screenSize.getWidth();
+        this.screenHeight = screenSize.getHeight();
+        resize((int)Math.round(this.screenWidth * 0.156),(int)Math.round(this.screenHeight * 0.416));
+        this.userField = new TextArea((int)Math.round(this.screenHeight * 0.023),(int)Math.round(this.screenWidth * 0.008));
+        this.pinField = new TextArea((int)Math.round(this.screenHeight * 0.023),(int)Math.round(this.screenWidth * 0.008));
         GUI();
         show();
         main(null);
@@ -43,18 +60,21 @@ public class NameService extends Frame implements Runnable {
     public void GUI() {
         setResizable(false);
         setBackground(Color.lightGray);
-        ecran.setEditable(false);
+        userField.setEditable(false);
+        pinField.setEditable(false);
         GridBagLayout GBL = new GridBagLayout();
         setLayout(GBL);
         Panel P1 = new Panel();
-        P1.add("North",ecran);
+        P1.add("East", userField);
+        add(P1);
+        P1.add("West", pinField);
         add(P1);
         setLocation((Toolkit.getDefaultToolkit().getScreenSize().width  - getSize().width) / 5, (Toolkit.getDefaultToolkit().getScreenSize().height - getSize().height) / 5);
-
     }
 
     public void readFile() {
-        ecran.setText("");
+        userField.setText("");
+        pinField.setText("");
         String currentLine;
         BufferedReader br = null;
         try {
@@ -62,8 +82,11 @@ public class NameService extends Frame implements Runnable {
             while ((currentLine = br.readLine()) != null) {
                 String[] str = currentLine.split(",");
                 //System.out.println(str[0] + "," + str[1]);
-                String word = (str[0] + " // " + str[1] + '\n');
-                ecran.append(word);
+                //String word = (str[0] + " // " + str[1] + '\n');
+                userField.append(str[0] + '\n');
+                pinField.append(str[1] + '\n');
+                userField.append("----------------------- \n");
+                pinField.append("----------------------- \n");
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -77,11 +100,6 @@ public class NameService extends Frame implements Runnable {
             return true;
         }
         return super.handleEvent(i);
-    }
-
-    @Override
-    public void run() {
-        //readFile();
     }
 
     public void registerUser(String name, String pin){
@@ -168,4 +186,5 @@ public class NameService extends Frame implements Runnable {
         }
         return null;
     }
+
 }

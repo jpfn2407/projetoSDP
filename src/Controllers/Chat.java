@@ -7,25 +7,36 @@ import javax.crypto.spec.DESKeySpec;
 import java.awt.*;
 
 public class Chat extends Frame {
-    Integer pin = null;
-    NameService nameService = null;
-    Socket sock= null;
+    private Integer pin = null;
+    private NameService nameService = null;
+    private ChatSocket sock = null;
+    private Thread sockThread = null;
+    private SecretKey secretKey = null;
+    private Cipher desCipher = null;
     private static final String desEncodingPassword = "PasswordSuperSecreta";
-    SecretKey secretKey = null;
-    Cipher desCipher = null;
 
-    TextArea ecran=new TextArea(10,50);
-    TextField pinField=new TextField("Pin",30);
-    Button validateBtn=new Button("Validate");
-    TextField usersField=new TextField("Users",30);
-    TextField msgField=new TextField("Message", 30);
-    Button sendBtn=new Button("Send");
-
+    private double screenWidth;
+    private double screenHeight;
+    private TextArea ecran=new TextArea(10,50);
+    private TextField pinField=new TextField("Pin",30);
+    private TextField usersField=new TextField("Users",30);
+    private TextField msgField=new TextField("Message", 30);
+    private Button validateBtn=new Button("Validate");
+    private Button sendBtn=new Button("Send");
 
     public Chat(String str, NameService nameService){
         super(str);
         this.nameService = nameService;
-        resize(400,325);
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        this.screenWidth = screenSize.getWidth();
+        this.screenHeight = screenSize.getHeight();
+
+        //resize(400,325);
+        resize((int)Math.round(this.screenWidth * 0.208), (int)Math.round(this.screenHeight * 0.285));
+        this.ecran = new TextArea((int)Math.round(this.screenHeight * 0.009),(int)Math.round(this.screenWidth * 0.026));
+        this.pinField = new TextField("Pin", (int)Math.round(this.screenWidth * 0.018));
+        this.usersField = new TextField("Users",(int)Math.round(this.screenWidth * 0.023));
+        this.msgField = new TextField("Message", (int)Math.round(this.screenWidth * 0.0195));
         GUI();
         show();
     }
@@ -48,11 +59,14 @@ public class Chat extends Frame {
 
     public boolean handleEvent(Event i){
         if(i.id==Event.WINDOW_DESTROY){
-            dispose();
             //System.exit(0);
             if( this.sock != null && this.sock.isRunning()){
                 this.sock.stop();
+                this.sockThread.stop();
+                this.sock = null;
+                this.sockThread = null;
             }
+            dispose();
             return true;
         }
         return super.handleEvent(i);
@@ -63,14 +77,18 @@ public class Chat extends Frame {
             String pin = this.pinField.getText();
             if (!isNumber(pin) || Integer.parseInt(pin) < 8000 || Integer.parseInt(pin) > 8010){
                 ecran.appendText("Pin invalido. Está fora do range 8000 e 8010. \n");
+
             } else if (!this.nameService.isPinRegistered(pin)) {
                 ecran.appendText("Este Pin não se encontra registado. \n");
+
             } else if(this.pin != null){
                 ecran.appendText("Serviço de chat já está a correr com o pin " + this.pin + ". \n");
+
             } else {
                 try {
                     ecran.appendText("\n Utilizador " + this.nameService.getUser(pin) + " validado! \n \n");
                     this.pin = Integer.parseInt(pin);
+                    setTitle(this.nameService.getUser(pin));
 
                     //Cria o conteudo necessario para fazer encode e decode de mensagens
                     DESKeySpec desKeySpec = new DESKeySpec(this.desEncodingPassword.getBytes());
@@ -79,9 +97,9 @@ public class Chat extends Frame {
                     this.desCipher = Cipher.getInstance("DES/ECB/PKCS5Padding");
 
                     //Cria um novo socket e associa a uma thread
-                    this.sock = new Socket(ecran, this.pin, this.nameService, this.secretKey, this.desCipher);
-                    Thread thread = new Thread(this.sock);
-                    thread.start();
+                    this.sock = new ChatSocket(ecran, this.pin, this.nameService, this.secretKey, this.desCipher);
+                    this.sockThread = new Thread(this.sock);
+                    this.sockThread.start();
                 } catch (Exception e){
                     ecran.appendText("\n Erro ao abrir o socket. Ver a consola para mais info.");
                     System.out.println(e);
@@ -89,7 +107,7 @@ public class Chat extends Frame {
             }
             return true;
 
-        } else if (i.target==sendBtn){
+        }else if (i.target==sendBtn){
             if (this.pin == null) {
                 ecran.appendText("Ainda não validou um pin. \n");
             } else {

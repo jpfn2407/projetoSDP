@@ -9,19 +9,18 @@ import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-public class Socket implements Runnable {
-    Integer pin = null;
-    NameService nameService = null;
-    SecretKey secretKey = null;
-    Cipher desCipher = null;
-    boolean running = false;
+public class ChatSocket implements Runnable {
+    private Integer pin = null;
+    private NameService nameService = null;
+    private SecretKey secretKey = null;
+    private Cipher desCipher = null;
+    private boolean running = false;
 
-    InetAddress ER,IPr;
-    DatagramSocket DS;
-    byte bp[]=new byte[1024];
-    TextArea ecran=new TextArea(10,30);
+    private DatagramSocket DS;
+    private byte bp[]=new byte[1024];
+    private TextArea ecran=new TextArea(10,30);
 
-    Socket(TextArea ta, Integer pin, NameService nameService, SecretKey secretKey, Cipher desCipher){
+    ChatSocket(TextArea ta, Integer pin, NameService nameService, SecretKey secretKey, Cipher desCipher){
         ecran=ta;
         this.pin = pin;
         this.nameService = nameService;
@@ -42,7 +41,9 @@ public class Socket implements Runnable {
     }
 
     public void stop(){
+        this.pin = null;
         this.running = false;
+        this.DS.close();
     }
 
     public boolean isRunning(){
@@ -53,7 +54,7 @@ public class Socket implements Runnable {
         try{
             //Recebe um packet vindo da network
             DatagramPacket DP = new DatagramPacket(bp,1024);
-            DS.receive(DP);
+            this.DS.receive(DP);
 
             String receivingMsg = null;
             try {
