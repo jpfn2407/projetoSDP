@@ -76,14 +76,14 @@ public class ChatSocket implements Runnable {
                     for(String portStr : usersList){
                         Integer port = Integer.parseInt(portStr);
                         if(port != null){
-                            //byte[] b = msg.getBytes(StandardCharsets.UTF_8);
+                            byte[] b = msg.getBytes(StandardCharsets.UTF_8);
                             this.desCipher.init(Cipher.ENCRYPT_MODE, this.secretKey);
                             ArrayList<Object> sendList = new ArrayList<>();
                             sendList.add(msg);
                             sendList.add(this.name);
-                            byte[] b = sendList.stream().collect(ByteArrayOutputStream::new, (baos, i) -> baos.write((byte) i),
-                                            (baos1, baos2) -> baos1.write(baos2.toByteArray(), 0, baos2.size()))
-                                    .toByteArray();
+                            //byte[] b = sendList.stream().collect(ByteArrayOutputStream::new, (baos, i) -> baos.write((byte) i),
+                            //                (baos1, baos2) -> baos1.write(baos2.toByteArray(), 0, baos2.size()))
+                            //        .toByteArray();
                             byte[] encodedSTR = this.desCipher.doFinal(b);
                             int len = msg.length();
 
@@ -102,11 +102,11 @@ public class ChatSocket implements Runnable {
                     //Faz decode da mensagem
                     desCipher.init(Cipher.DECRYPT_MODE, secretKey);
                     byte[] decodedSTR = desCipher.doFinal(b);
-                    ArrayList<Object> sendList = Arrays.asList(ArrayUtils.toObject(array));
+                    //ArrayList<Object> sendList = Bytes.asList(decodedSTR);;
                     //receivingMsg = new String(decodedSTR);
 
                     //String receivingUser = (String.valueOf(DP.getPort()));
-                    ecran.appendText( receivingUser + ":" + receivingMsg + "\n");
+                    //ecran.appendText( receivingUser + ":" + receivingMsg + "\n");
                 } catch (Exception e2){
                     System.out.println("Erro a fazer a decifragem do packet receptor.");
                     System.out.println(e2);
