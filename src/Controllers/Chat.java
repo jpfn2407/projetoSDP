@@ -5,11 +5,13 @@ import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.DESKeySpec;
 import java.awt.*;
+import java.security.InvalidKeyException;
 
 public class Chat extends Frame {
     private Integer pin = null;
-    private NameService nameService = null;
+    //private NameService nameService = null;
     private ChatSocket sock = null;
+    private ChatValidationSocket validationSocket = null;
     private Thread sockThread = null;
     private SecretKey secretKey = null;
     private Cipher desCipher = null;
@@ -24,9 +26,9 @@ public class Chat extends Frame {
     private Button validateBtn=new Button("Validate");
     private Button sendBtn=new Button("Send");
 
-    public Chat(String str, NameService nameService){
+    public Chat(String str){
         super(str);
-        this.nameService = nameService;
+        //this.nameService = nameService;
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         this.screenWidth = screenSize.getWidth();
         this.screenHeight = screenSize.getHeight();
@@ -39,6 +41,19 @@ public class Chat extends Frame {
         this.msgField = new TextField("Message", (int)Math.round(this.screenWidth * 0.0195));
         GUI();
         show();
+
+        try {
+            DESKeySpec desKeySpec = new DESKeySpec(this.desEncodingPassword.getBytes());
+            SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("DES");
+            this.secretKey = keyFactory.generateSecret(desKeySpec);
+            this.desCipher = Cipher.getInstance("DES/ECB/PKCS5Padding");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        //this.sock = new ChatSocket(ecran, this.pin, this.secretKey, this.desCipher, this);
+        this.validationSocket = new ChatValidationSocket(ecran, this.pin, this.secretKey, this.desCipher, this);
+
     }
 
     public void GUI(){
@@ -75,67 +90,69 @@ public class Chat extends Frame {
     public boolean action(Event i,Object o){
         if(i.target==validateBtn){
             String pin = this.pinField.getText();
-            if (!isNumber(pin) || Integer.parseInt(pin) < 8000 || Integer.parseInt(pin) > 8010){
-                ecran.appendText("Pin invalido. Está fora do range 8000 e 8010. \n");
+            //if (!isNumber(pin) || Integer.parseInt(pin) < 8000 || Integer.parseInt(pin) > 8010){
+            //    ecran.appendText("Pin invalido. Está fora do range 8000 e 8010. \n");
+//
+            //} else if (!this.nameService.isPinRegistered(pin)) {
+            //    ecran.appendText("Este Pin não se encontra registado. \n");
+//
+            //} else if(this.pin != null){
+            //    ecran.appendText("Serviço de chat já está a correr com o pin " + this.pin + ". \n");
+//
+            //} else {
+            //    try {
+            //        ecran.appendText("\n Utilizador " + this.nameService.getUser(pin) + " validado! \n \n");
+            //        this.pin = Integer.parseInt(pin);
+            //        setTitle(this.nameService.getUser(pin));
+//
+            //        //Cria o conteudo necessario para fazer encode e decode de mensagens
+            //        DESKeySpec desKeySpec = new DESKeySpec(this.desEncodingPassword.getBytes());
+            //        SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("DES");
+            //        this.secretKey = keyFactory.generateSecret(desKeySpec);
+            //        this.desCipher = Cipher.getInstance("DES/ECB/PKCS5Padding");
+//
+            //        //Cria um novo socket e associa a uma thread
+            //        this.sock = new ChatSocket(ecran, this.pin, this.secretKey, this.desCipher, this);
+            //        this.sockThread = new Thread(this.sock);
+            //        this.sockThread.start();
+            //    } catch (Exception e){
+            //        ecran.appendText("\n Erro ao abrir o socket. Ver a consola para mais info.");
+            //        System.out.println(e);
+            //    }
+            //}
 
-            } else if (!this.nameService.isPinRegistered(pin)) {
-                ecran.appendText("Este Pin não se encontra registado. \n");
-
-            } else if(this.pin != null){
-                ecran.appendText("Serviço de chat já está a correr com o pin " + this.pin + ". \n");
-
-            } else {
-                try {
-                    ecran.appendText("\n Utilizador " + this.nameService.getUser(pin) + " validado! \n \n");
-                    this.pin = Integer.parseInt(pin);
-                    setTitle(this.nameService.getUser(pin));
-
-                    //Cria o conteudo necessario para fazer encode e decode de mensagens
-                    DESKeySpec desKeySpec = new DESKeySpec(this.desEncodingPassword.getBytes());
-                    SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("DES");
-                    this.secretKey = keyFactory.generateSecret(desKeySpec);
-                    this.desCipher = Cipher.getInstance("DES/ECB/PKCS5Padding");
-
-                    //Cria um novo socket e associa a uma thread
-                    this.sock = new ChatSocket(ecran, this.pin, this.nameService, this.secretKey, this.desCipher);
-                    this.sockThread = new Thread(this.sock);
-                    this.sockThread.start();
-                } catch (Exception e){
-                    ecran.appendText("\n Erro ao abrir o socket. Ver a consola para mais info.");
-                    System.out.println(e);
-                }
+            Integer port = this.validationSocket.validateMethod(pin);
+            System.out.println(port);
+            if(port != null){
+                this.sock = new ChatSocket(ecran, port, this.secretKey, this.desCipher, this);
+                this.sockThread = new Thread(this.sock);
+                this.sockThread.start();
             }
             return true;
 
-        }else if (i.target==sendBtn){
-            if (this.pin == null) {
-                ecran.appendText("Ainda não validou um pin. \n");
-            } else {
-                String users = usersField.getText();
-                String msg = msgField.getText();
-                String[] usersList = users.split(";");
-                for(String user : usersList){
-                    if (!this.nameService.isUserRegistered(user)){
-                        ecran.appendText("AVISO: Utilizador  '" + user + "' não se encontra registado. \n");
-                    } else {
-                        Integer port = Integer.parseInt(this.nameService.getPin(user));
-                        sock.sendDP(port, msg);
-                    }
-                }
-                msgField.setText("");
-                return true;
-            }
+        }
+        else if (i.target==sendBtn){
+            //if (this.pin == null) {
+            //    ecran.appendText("Ainda não validou um pin. \n");
+            //} else {
+            //    String users = usersField.getText();
+            //    String msg = msgField.getText();
+            //    String[] usersList = users.split(";");
+            //    for(String user : usersList){
+            //        if (!this.nameService.isUserRegistered(user)){
+            //            ecran.appendText("AVISO: Utilizador  '" + user + "' não se encontra registado. \n");
+            //        } else {
+            //            Integer port = Integer.parseInt(this.nameService.getPin(user));
+            //            sock.sendDP(port, msg);
+            //        }
+            //    }
+            //    msgField.setText("");
+            //    return true;
+            //}
+            this.sock.sendMessage(msgField.getText(), usersField.getText().split(";"));
+            msgField.setText("");
         }
         return false;
-    }
-
-    public boolean isNumber(String str){
-        try {
-            int val = Integer.parseInt(str);
-            return true;
-        } catch (NumberFormatException e){
-            return false;
-        }
     }
 
 }

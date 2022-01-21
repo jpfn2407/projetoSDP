@@ -1,10 +1,22 @@
 package Controllers;
 import java.awt.*;
+import java.io.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+
 
 public class UserRegister extends Frame {
     private double screenWidth;
     private double screenHeight;
-    private NameService nameService = null;
+    //private NameService nameService = null;
+    private DatagramSocket datagramSocket;
+    private final Integer port = 7998;
 
     private TextArea ecran=new TextArea(1,75);
     private TextField nameField=new TextField("Nome",30);
@@ -17,7 +29,12 @@ public class UserRegister extends Frame {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         this.screenWidth = screenSize.getWidth();
         this.screenHeight = screenSize.getHeight();
-        this.nameService = nameService;
+        //this.nameService = nameService;
+        try {
+            this.datagramSocket = new DatagramSocket(this.port);
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
 
         //GUI elements
         resize((int)Math.round(this.screenWidth * 0.3125),(int)Math.round(this.screenHeight * 0.13));
@@ -56,24 +73,73 @@ public class UserRegister extends Frame {
         if(i.target== register){
             String name=nameField.getText();
             String pin=pinField.getText();
-            //sock.sendDP(8080,msg,end);
-            //text.setText("");
-            if(this.nameService.isUserRegistered(name)){
-                ecran.setText("Este utilizador já existe associado ao pin: " + this.nameService.getPin(name));
-            } else if(this.nameService.isPinRegistered(pin)){
-                ecran.setText("Este pin já está associado ao utilizador: " + this.nameService.getUser(pin));
-            } else if (!isNumber(pin) || Integer.parseInt(pin) < 8000 || Integer.parseInt(pin) > 8010){
+
+            //if(this.nameService.isUserRegistered(name)){
+            //    ecran.setText("Este utilizador já existe associado ao pin: " + this.nameService.getPin(name));
+            //} else if(this.nameService.isPinRegistered(pin)){
+            //    ecran.setText("Este pin já está associado ao utilizador: " + this.nameService.getUser(pin));
+            //} else if (!isNumber(pin) || Integer.parseInt(pin) < 8000 || Integer.parseInt(pin) > 8010){
+            //    ecran.setText("Pin invalido. Está fora do range 8000 e 8010.");
+            //} else {
+            //    this.nameService.registerUser(name, pin);
+            //    this.nameService.readFile();
+            //    ecran.setText("Registado com sucesso!");
+            //}
+
+            if((boolean) sendCommandPackage(new ArrayList<>(Arrays.asList("isUserRegistered", name))).get(1)){
+                ecran.setText("Este utilizador já existe associado ao pin: " +
+                        (String) sendCommandPackage(new ArrayList<>(Arrays.asList("getPin", name))).get(1));
+            }
+            else if((boolean) sendCommandPackage(new ArrayList<>(Arrays.asList("isPinRegistered", pin))).get(1)){
+                ecran.setText("Este utilizador já existe associado ao pin: " +
+                        (String) sendCommandPackage(new ArrayList<>(Arrays.asList("getUser", pin))).get(1));
+            }
+            else if (!isNumber(pin) || Integer.parseInt(pin) < 8000 || Integer.parseInt(pin) > 8010) {
                 ecran.setText("Pin invalido. Está fora do range 8000 e 8010.");
-            } else {
-                this.nameService.registerUser(name, pin);
-                this.nameService.readFile();
+            }
+            else{
+                sendCommandPackage(new ArrayList<>(Arrays.asList("registerUser", name, pin)));
                 ecran.setText("Registado com sucesso!");
             }
             return true;
+
         } else if ( i.target == newChatWindow ){
-            new Chat("Chat", nameService);
+            new Chat("Chat");
         }
         return false;
+    }
+
+    public ArrayList<Object> sendCommandPackage(ArrayList<Object> commandListPackage){
+        try {
+            //Transforma a lista em package de bytes para enviar
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            ObjectOutputStream outputStream = null;
+            outputStream = new ObjectOutputStream(out);
+            outputStream.writeObject(commandListPackage);
+            outputStream.close();
+            byte[] listData = out.toByteArray();
+            DatagramPacket DP = new DatagramPacket(listData, listData.length, InetAddress.getByName("127.0.0.1"), 7999);
+            this.datagramSocket.send(DP);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        ArrayList<Object> receivedCommands = null;
+        while (true){
+            try{
+                byte[] listData = new byte[1024];
+                DatagramPacket datagramPacket = new DatagramPacket(listData,1024);
+                this.datagramSocket.receive(datagramPacket);
+                byte[] listDataBytes = Arrays.copyOf(datagramPacket.getData(), datagramPacket.getLength());
+                ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(listDataBytes));
+                receivedCommands = (ArrayList) inputStream.readObject();
+                if(receivedCommands != null){
+                    break;
+                }
+            } catch (Exception e){
+                System.out.println(e);
+            }
+        }
+        return receivedCommands;
     }
 
     public boolean isNumber(String str){
