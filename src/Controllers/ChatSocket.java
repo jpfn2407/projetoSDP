@@ -76,7 +76,7 @@ public class ChatSocket implements Runnable {
                     for(String portStr : usersList){
                         Integer port = Integer.parseInt(portStr);
                         if(port != null){
-                            String finalMsg = new String(this.name + ":" + msg);
+                            String finalMsg = new String(this.name + " : " + msg);
                             byte[] b = finalMsg.getBytes(StandardCharsets.UTF_8);
                             this.desCipher.init(Cipher.ENCRYPT_MODE, this.secretKey);
                             byte[] encodedSTR = this.desCipher.doFinal(b);
