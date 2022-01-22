@@ -126,6 +126,7 @@ public class Chat extends Frame {
             if(validationList != null){
                 Integer port = (Integer) validationList.get(0);
                 String name = (String)  validationList.get(1);
+                setTitle(name);
                 this.sock = new ChatSocket(ecran, port, name, this.secretKey, this.desCipher, this);
                 this.sockThread = new Thread(this.sock);
                 this.sockThread.start();

@@ -53,6 +53,13 @@ public class ChatValidationSocket implements Runnable {
                 ecran.appendText("Pin invalido. Está fora do range 8000 e 8010. \n");
                 return null;
             }
+            try {
+                (new DatagramSocket(Integer.parseInt(pin))).close();
+            }
+            catch(SocketException e) {
+                ecran.appendText("Este Pin já está a ser usado por outro chat. \n");
+                return null;
+            }
             if(this.DS == null){
                 this.DS = new DatagramSocket(Integer.parseInt(pin));
                 if (!(boolean) sendCommandPackage(new ArrayList<>(Arrays.asList("isPinRegistered", pin))).get(1)) {
@@ -102,15 +109,16 @@ public class ChatValidationSocket implements Runnable {
         try {
             //Transforma a lista em package de bytes para enviar
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-
+            this.desCipher.init(Cipher.ENCRYPT_MODE, this.secretKey);
             ObjectOutputStream outputStream = null;
             outputStream = new ObjectOutputStream(out);
             outputStream.writeObject(commandListPackage);
             outputStream.close();
             byte[] listData = out.toByteArray();
-            DatagramPacket DP = new DatagramPacket(listData, listData.length, InetAddress.getByName("127.0.0.1"), 7999);
+            byte[] encodedListData = this.desCipher.doFinal(listData);
+            DatagramPacket DP = new DatagramPacket(encodedListData, encodedListData.length, InetAddress.getByName("127.0.0.1"), 7999);
             this.DS.send(DP);
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         ArrayList<Object> receivedCommands = null;
@@ -120,7 +128,9 @@ public class ChatValidationSocket implements Runnable {
                 DatagramPacket datagramPacket = new DatagramPacket(listData,1024);
                 this.DS.receive(datagramPacket);
                 byte[] listDataBytes = Arrays.copyOf(datagramPacket.getData(), datagramPacket.getLength());
-                ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(listDataBytes));
+                desCipher.init(Cipher.DECRYPT_MODE, secretKey);
+                byte[] decriptedList = desCipher.doFinal(listDataBytes);
+                ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(decriptedList));
                 receivedCommands = (ArrayList) inputStream.readObject();
                 if(receivedCommands != null){
                     break;

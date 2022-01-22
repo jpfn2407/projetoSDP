@@ -65,7 +65,9 @@ public class ChatSocket implements Runnable {
             this.DS.receive(DP);
             try {
                 byte[] listDataBytes = Arrays.copyOf(DP.getData(), DP.getLength());
-                ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(listDataBytes));
+                desCipher.init(Cipher.DECRYPT_MODE, secretKey);
+                byte[] decriptedList = desCipher.doFinal(listDataBytes);
+                ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(decriptedList));
                 ArrayList<Object> receivedList = (ArrayList) inputStream.readObject();
                 String validation = (String) receivedList.get(0);
 
@@ -90,8 +92,8 @@ public class ChatSocket implements Runnable {
                     }
                 }
             } catch (Exception e){
-                String receivingMsg = null;
                 try {
+                    String receivingMsg = null;
                     //Apanha apenas cadeia de bytes da string vindo do packet
                     byte[] b = Arrays.copyOf(DP.getData(), DP.getLength());
                     //Faz decode da mensagem
@@ -103,10 +105,9 @@ public class ChatSocket implements Runnable {
                     ecran.appendText( receivingMsg + "\n");
                 } catch (Exception e2){
                     System.out.println("Erro a fazer a decifragem do packet receptor.");
+                    System.out.println(e);
                     System.out.println(e2);
                 }
-                System.out.println("Packet recebido.");
-                //System.out.println(e);
             }
 
             //String receivingMsg = null;
@@ -125,7 +126,6 @@ public class ChatSocket implements Runnable {
 
             //String receivingUser = this.nameService.getUser(String.valueOf(DP.getPort()));
             //ecran.appendText( receivingUser + ":" + receivingMsg + "\n");
-
 
         }catch(IOException e){
             System.out.println("Erro a receber o packet.");
@@ -160,16 +160,19 @@ public class ChatSocket implements Runnable {
             commandListPackage.add(msg);
             commandListPackage.add(usersList);
 
+
             ByteArrayOutputStream out = new ByteArrayOutputStream();
+            this.desCipher.init(Cipher.ENCRYPT_MODE, this.secretKey);
 
             ObjectOutputStream outputStream = null;
             outputStream = new ObjectOutputStream(out);
             outputStream.writeObject(commandListPackage);
             outputStream.close();
             byte[] listData = out.toByteArray();
-            DatagramPacket DP = new DatagramPacket(listData, listData.length, InetAddress.getByName("127.0.0.1"), 7999);
+            byte[] encodedListData = this.desCipher.doFinal(listData);
+            DatagramPacket DP = new DatagramPacket(encodedListData, encodedListData.length, InetAddress.getByName("127.0.0.1"), 7999);
             this.DS.send(DP);
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

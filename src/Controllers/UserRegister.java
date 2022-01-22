@@ -1,4 +1,8 @@
 package Controllers;
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.DESKeySpec;
 import java.awt.*;
 import java.io.*;
 import java.net.DatagramPacket;
@@ -17,6 +21,9 @@ public class UserRegister extends Frame {
     //private NameService nameService = null;
     private DatagramSocket datagramSocket;
     private final Integer port = 7998;
+    private SecretKey secretKey = null;
+    private Cipher desCipher = null;
+    private static final String desEncodingPassword = "PasswordSuperSecreta";
 
     private TextArea ecran=new TextArea(1,75);
     private TextField nameField=new TextField("Nome",30);
@@ -35,7 +42,14 @@ public class UserRegister extends Frame {
         } catch (SocketException e) {
             e.printStackTrace();
         }
-
+        try {
+            DESKeySpec desKeySpec = new DESKeySpec(this.desEncodingPassword.getBytes());
+            SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("DES");
+            this.secretKey = keyFactory.generateSecret(desKeySpec);
+            this.desCipher = Cipher.getInstance("DES/ECB/PKCS5Padding");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         //GUI elements
         resize((int)Math.round(this.screenWidth * 0.3125),(int)Math.round(this.screenHeight * 0.13));
         this.ecran = new TextArea((int)Math.round(this.screenHeight * 0.0009),(int)Math.round(this.screenWidth * 0.04));
@@ -91,7 +105,7 @@ public class UserRegister extends Frame {
                         (String) sendCommandPackage(new ArrayList<>(Arrays.asList("getPin", name))).get(1));
             }
             else if((boolean) sendCommandPackage(new ArrayList<>(Arrays.asList("isPinRegistered", pin))).get(1)){
-                ecran.setText("Este utilizador já existe associado ao pin: " +
+                ecran.setText("Este pin já está associado ao utilizador: " +
                         (String) sendCommandPackage(new ArrayList<>(Arrays.asList("getUser", pin))).get(1));
             }
             else if (!isNumber(pin) || Integer.parseInt(pin) < 8000 || Integer.parseInt(pin) > 8010) {
@@ -113,14 +127,16 @@ public class UserRegister extends Frame {
         try {
             //Transforma a lista em package de bytes para enviar
             ByteArrayOutputStream out = new ByteArrayOutputStream();
+            this.desCipher.init(Cipher.ENCRYPT_MODE, this.secretKey);
             ObjectOutputStream outputStream = null;
             outputStream = new ObjectOutputStream(out);
             outputStream.writeObject(commandListPackage);
             outputStream.close();
             byte[] listData = out.toByteArray();
-            DatagramPacket DP = new DatagramPacket(listData, listData.length, InetAddress.getByName("127.0.0.1"), 7999);
+            byte[] encodedListData = this.desCipher.doFinal(listData);
+            DatagramPacket DP = new DatagramPacket(encodedListData, encodedListData.length, InetAddress.getByName("127.0.0.1"), 7999);
             this.datagramSocket.send(DP);
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         ArrayList<Object> receivedCommands = null;
@@ -130,7 +146,9 @@ public class UserRegister extends Frame {
                 DatagramPacket datagramPacket = new DatagramPacket(listData,1024);
                 this.datagramSocket.receive(datagramPacket);
                 byte[] listDataBytes = Arrays.copyOf(datagramPacket.getData(), datagramPacket.getLength());
-                ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(listDataBytes));
+                desCipher.init(Cipher.DECRYPT_MODE, secretKey);
+                byte[] decriptedList = desCipher.doFinal(listDataBytes);
+                ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(decriptedList));
                 receivedCommands = (ArrayList) inputStream.readObject();
                 if(receivedCommands != null){
                     break;

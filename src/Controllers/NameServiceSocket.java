@@ -1,5 +1,9 @@
 package Controllers;
 
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.DESKeySpec;
 import java.awt.*;
 import java.io.*;
 import java.net.DatagramPacket;
@@ -14,6 +18,9 @@ public class NameServiceSocket implements Runnable{
     private final Integer port = 7999;
     private NameService nameService;
     private DatagramSocket datagramSocket;
+    private SecretKey secretKey = null;
+    private Cipher desCipher = null;
+    private static final String desEncodingPassword = "PasswordSuperSecreta";
 
     NameServiceSocket(NameService nameService){
         this.running = true;
@@ -21,6 +28,14 @@ public class NameServiceSocket implements Runnable{
         try {
             this.datagramSocket = new DatagramSocket(this.port);
         } catch (SocketException e) {
+            e.printStackTrace();
+        }
+        try {
+            DESKeySpec desKeySpec = new DESKeySpec(this.desEncodingPassword.getBytes());
+            SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("DES");
+            this.secretKey = keyFactory.generateSecret(desKeySpec);
+            this.desCipher = Cipher.getInstance("DES/ECB/PKCS5Padding");
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -42,7 +57,10 @@ public class NameServiceSocket implements Runnable{
 
             byte[] listDataBytes = Arrays.copyOf(DP.getData(), DP.getLength());
 
-            ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(listDataBytes));
+            desCipher.init(Cipher.DECRYPT_MODE, secretKey);
+            byte[] decriptedList = desCipher.doFinal(listDataBytes);
+
+            ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(decriptedList));
             ArrayList<Object> receivedList = (ArrayList) inputStream.readObject();
             switch((String) receivedList.get(0)){
                 case "registerUser":
@@ -71,7 +89,9 @@ public class NameServiceSocket implements Runnable{
                     String msg = (String) receivedList.get(1);
                     ArrayList<Object> responseList = new ArrayList<>();
                     for(String user : (String[]) receivedList.get(2)){
-                        responseList.add(this.nameService.getPin(user));
+                        if(this.nameService.isUserRegistered(user)){
+                            responseList.add(this.nameService.getPin(user));
+                        }
                     }
                     sendResponse(new ArrayList<>(Arrays.asList("validateUsersInMessage",msg, responseList, port)));
                     break;
@@ -86,14 +106,16 @@ public class NameServiceSocket implements Runnable{
     public void sendResponse(ArrayList<Object> commandListPackage){
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
+            this.desCipher.init(Cipher.ENCRYPT_MODE, this.secretKey);
             ObjectOutputStream outputStream = null;
             outputStream = new ObjectOutputStream(out);
             outputStream.writeObject(commandListPackage);
             outputStream.close();
             byte[] listData = out.toByteArray();
-            DatagramPacket DP = new DatagramPacket(listData, listData.length, InetAddress.getByName("127.0.0.1"), (Integer) commandListPackage.get(commandListPackage.size()-1));
+            byte[] encodedListData = this.desCipher.doFinal(listData);
+            DatagramPacket DP = new DatagramPacket(encodedListData, encodedListData.length, InetAddress.getByName("127.0.0.1"), (Integer) commandListPackage.get(commandListPackage.size()-1));
             this.datagramSocket.send(DP);
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
